@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>NutriTrack</title>
+  <meta name="theme-color" content="#16a463" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="NutriTrack" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">N</span>
+        <span class="brand-name">NutriTrack</span>
+      </div>
+      <div class="date-nav">
+        <button id="prevDay" class="icon-btn" title="Previous day">&larr;</button>
+        <input type="date" id="datePicker" />
+        <button id="nextDay" class="icon-btn" title="Next day">&rarr;</button>
+        <button id="todayBtn" class="ghost-btn">Today</button>
+        <button id="settingsBtn" class="icon-btn" title="Goals settings">&#9881;</button>
+      </div>
+    </header>
+
+    <section class="dashboard">
+      <div class="ring-card card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 160 160" class="ring-svg">
+            <circle class="ring-track" cx="80" cy="80" r="70"></circle>
+            <circle id="ringProgress" class="ring-progress" cx="80" cy="80" r="70"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-value" id="ringCalories">0</div>
+            <div class="ring-sub" id="ringGoalLabel">of 2000 kcal</div>
+          </div>
+        </div>
+        <div class="ring-footnote" id="ringRemaining">2000 kcal remaining</div>
+      </div>
+
+      <div class="macro-card card">
+        <div class="macro-row" data-macro="protein">
+          <div class="macro-head">
+            <span class="macro-dot dot-protein"></span>
+            <span class="macro-name">Protein</span>
+            <span class="macro-values" id="proteinValues">0 / 120g</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill fill-protein" id="proteinBar"></div></div>
+        </div>
+        <div class="macro-row" data-macro="carbs">
+          <div class="macro-head">
+            <span class="macro-dot dot-carbs"></span>
+            <span class="macro-name">Carbs</span>
+            <span class="macro-values" id="carbsValues">0 / 250g</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill fill-carbs" id="carbsBar"></div></div>
+        </div>
+        <div class="macro-row" data-macro="fat">
+          <div class="macro-head">
+            <span class="macro-dot dot-fat"></span>
+            <span class="macro-name">Fat</span>
+            <span class="macro-values" id="fatValues">0 / 65g</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill fill-fat" id="fatBar"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="meal-selector-row">
+      <span class="section-label">Adding to:</span>
+      <div class="meal-selector" id="mealSelector">
+        <button class="meal-chip" data-meal="breakfast">Breakfast</button>
+        <button class="meal-chip" data-meal="lunch">Lunch</button>
+        <button class="meal-chip" data-meal="snack">Snack</button>
+        <button class="meal-chip" data-meal="dinner">Dinner</button>
+      </div>
+    </section>
+
+    <section class="add-food card">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="search">Search food</button>
+        <button class="tab-btn" data-tab="favorites">My foods</button>
+        <button class="tab-btn" data-tab="manual">Manual entry</button>
+        <button class="tab-btn" data-tab="scan">Scan label</button>
+      </div>
+
+      <div class="tab-panel" id="tab-search">
+        <div class="search-row">
+          <input type="text" id="searchInput" placeholder="e.g. chicken breast, banana, rice..." />
+          <button id="searchBtn">Search</button>
+        </div>
+        <div id="searchResults" class="results"></div>
+      </div>
+
+      <div class="tab-panel hidden" id="tab-favorites">
+        <div id="favoritesList" class="results"></div>
+      </div>
+
+      <div class="tab-panel hidden" id="tab-manual">
+        <div class="manual-grid">
+          <input type="text" id="manDesc" placeholder="Food description" />
+          <input type="number" id="manCalories" placeholder="Calories" min="0" />
+          <input type="number" id="manProtein" placeholder="Protein (g)" min="0" />
+          <input type="number" id="manCarbs" placeholder="Carbs (g)" min="0" />
+          <input type="number" id="manFat" placeholder="Fat (g)" min="0" />
+          <button id="manAddBtn">Add</button>
+        </div>
+        <label class="save-fav-check"><input type="checkbox" id="manSaveFav" /> Also save to My foods for next time</label>
+      </div>
+
+      <div class="tab-panel hidden" id="tab-scan">
+        <p class="hint-text">Take a photo of a nutrition facts label. AI will read it and pre-fill the values below for you to check before adding.</p>
+        <input type="file" id="scanInput" accept="image/*" capture="environment" />
+        <div id="scanPreview" class="scan-preview hidden">
+          <img id="scanPreviewImg" alt="Label preview" />
+        </div>
+        <p id="scanStatus" class="empty-msg hidden"></p>
+      </div>
+    </section>
+
+    <section class="meals">
+      <h2 class="section-title">Today's meals</h2>
+      <div class="meal-groups" id="mealGroups"></div>
+    </section>
+
+    <section class="trend card">
+      <div class="trend-header">
+        <h2 class="section-title">Last 7 days</h2>
+        <span class="trend-legend"><span class="legend-swatch"></span>Calories <span class="legend-swatch legend-goal"></span>Goal</span>
+      </div>
+      <svg viewBox="0 0 700 220" class="trend-svg" id="trendSvg"></svg>
+    </section>
+
+    <section class="history">
+      <h2 class="section-title">Recent days</h2>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </div>
+
+  <div id="gramsModal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="gramsFoodName"></h3>
+      <p class="hint-text" id="gramsHint"></p>
+      <label for="qtyInput">Quantity</label>
+      <div class="qty-row">
+        <input type="number" id="qtyInput" value="1" min="0" step="0.25" />
+        <select id="qtyUnit">
+          <option value="piece">piece / whole</option>
+          <option value="g">grams (g)</option>
+          <option value="kg">kilograms (kg)</option>
+          <option value="ml">milliliters (ml)</option>
+          <option value="tsp">teaspoon (~5ml)</option>
+          <option value="tbsp">tablespoon (~15ml)</option>
+          <option value="cup">cup (~240ml)</option>
+          <option value="glass">glass (~250ml)</option>
+          <option value="bowl">bowl (~150g)</option>
+          <option value="katori">katori (~150g)</option>
+        </select>
+      </div>
+      <label for="gramsInput">= grams (auto-estimated - edit if you know the exact weight)</label>
+      <input type="number" id="gramsInput" value="100" min="1" />
+      <div class="modal-actions">
+        <button id="gramsCancel" class="ghost-btn">Cancel</button>
+        <button id="gramsConfirm" class="primary-btn">Add to log</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="favModal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="favFoodName"></h3>
+      <p class="hint-text" id="favServingLabel"></p>
+      <label for="favQtyInput">Quantity</label>
+      <div class="qty-row">
+        <input type="number" id="favQtyInput" value="1" min="0" step="0.25" />
+        <select id="favQtyUnit">
+          <option value="piece">piece / whole</option>
+          <option value="g">grams (g)</option>
+          <option value="kg">kilograms (kg)</option>
+          <option value="ml">milliliters (ml)</option>
+          <option value="tsp">teaspoon (~5ml)</option>
+          <option value="tbsp">tablespoon (~15ml)</option>
+          <option value="cup">cup (~240ml)</option>
+          <option value="glass">glass (~250ml)</option>
+          <option value="bowl">bowl (~150g)</option>
+          <option value="katori">katori (~150g)</option>
+        </select>
+      </div>
+      <label for="favGramsDisplay">= grams (auto-estimated - edit to override)</label>
+      <input type="number" id="favGramsDisplay" min="0" />
+      <div class="fav-macro-grid">
+        <label>Cal<input type="number" id="favCalories" min="0" /></label>
+        <label>Protein<input type="number" id="favProtein" min="0" /></label>
+        <label>Carbs<input type="number" id="favCarbs" min="0" /></label>
+        <label>Fat<input type="number" id="favFat" min="0" /></label>
+      </div>
+      <div class="modal-actions">
+        <button id="favCancel" class="ghost-btn">Cancel</button>
+        <button id="favConfirm" class="primary-btn">Add to log</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scanModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Confirm scanned food</h3>
+      <label for="scanDesc">Description</label>
+      <input type="text" id="scanDesc" />
+      <p class="hint-text" id="scanServingLabel"></p>
+      <label for="scanServings">Servings eaten</label>
+      <input type="number" id="scanServings" value="1" min="0.25" step="0.25" />
+      <div class="fav-macro-grid">
+        <label>Cal<input type="number" id="scanCalories" min="0" /></label>
+        <label>Protein<input type="number" id="scanProtein" min="0" /></label>
+        <label>Carbs<input type="number" id="scanCarbs" min="0" /></label>
+        <label>Fat<input type="number" id="scanFat" min="0" /></label>
+      </div>
+      <div class="modal-actions">
+        <button id="scanCancel" class="ghost-btn">Cancel</button>
+        <button id="scanConfirm" class="primary-btn">Add to log</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Settings</h3>
+      <p class="hint-text">Daily goals - set your macros; the calorie goal is calculated automatically (protein 4 + carbs 4 + fat 9 kcal per gram).</p>
+      <div class="fav-macro-grid">
+        <label>Protein (g)<input type="number" id="goalProtein" min="0" /></label>
+        <label>Carbs (g)<input type="number" id="goalCarbs" min="0" /></label>
+        <label>Fat (g)<input type="number" id="goalFat" min="0" /></label>
+        <label>Calories (auto)<input type="number" id="goalCalories" readonly tabindex="-1" /></label>
+      </div>
+      <hr class="settings-divider" />
+      <p class="hint-text">API keys - stored only on this device.</p>
+      <label for="settingFdcKey">USDA food search key</label>
+      <input type="text" id="settingFdcKey" placeholder="USDA FoodData Central API key" />
+      <label for="settingAnthropicKey">Anthropic key (for label scanning, optional)</label>
+      <input type="password" id="settingAnthropicKey" placeholder="sk-ant-..." />
+      <hr class="settings-divider" />
+      <p class="hint-text">Backup - download a copy of all your data, or restore from a previous backup file.</p>
+      <div class="backup-row">
+        <button id="exportBtn" class="ghost-btn">Download my data</button>
+        <button id="importBtn" class="ghost-btn">Restore from backup</button>
+        <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
+      </div>
+      <div class="modal-actions">
+        <button id="settingsCancel" class="ghost-btn">Cancel</button>
+        <button id="settingsSave" class="primary-btn">Save settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Offline app-shell cache; skipped inside the Android (Capacitor) app,
+    // which bundles the files locally and needs no service worker.
+    if ('serviceWorker' in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
