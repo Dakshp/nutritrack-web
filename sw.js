@@ -1,7 +1,7 @@
 // App-shell cache so the installed app opens instantly and works offline
 // (food search still needs internet; logs/goals live in localStorage).
 // Bump the version whenever app files change - the old cache is dropped.
-const CACHE = 'nutritrack-v1';
+const CACHE = 'nutritrack-v2';
 const SHELL = [
   './',
   './index.html',

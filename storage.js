@@ -40,6 +40,30 @@ const Store = (() => {
     };
   }
 
+  // Older app versions saved entry macros as raw text-input strings; summing
+  // those with "+" concatenates digits instead of adding (8g + 79g of protein
+  // rendered as 879g on the dashboard). Repair such entries wherever they can
+  // enter: stored data from old versions (load) and restored backups (import).
+  function entryNeedsRepair(e) {
+    return (
+      ['calories', 'protein', 'carbs', 'fat'].some((k) => typeof e[k] !== 'number') ||
+      typeof e.id !== 'number' ||
+      (e.grams != null && typeof e.grams !== 'number')
+    );
+  }
+
+  function normalizeEntry(e) {
+    return {
+      ...e,
+      id: Number(e.id) || e.id,
+      grams: e.grams == null ? null : Number(e.grams) || null,
+      calories: r1(Number(e.calories) || 0),
+      protein: r1(Number(e.protein) || 0),
+      carbs: r1(Number(e.carbs) || 0),
+      fat: r1(Number(e.fat) || 0),
+    };
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -52,13 +76,22 @@ const Store = (() => {
       // defaults so upgraded installs pick up newly injected keys.
       if (!settings.fdcKey) settings.fdcKey = DEFAULT_FDC_KEY;
       if (!settings.anthropicKey) settings.anthropicKey = DEFAULT_ANTHROPIC_KEY;
-      return {
-        entries: Array.isArray(data.entries) ? data.entries : [],
+      let repaired = false;
+      const entries = (Array.isArray(data.entries) ? data.entries : []).map((e) => {
+        if (!entryNeedsRepair(e)) return e;
+        repaired = true;
+        return normalizeEntry(e);
+      });
+      const result = {
+        entries,
         nextId: Number(data.nextId) || 1,
         goals: normalizeGoals({ ...fresh.goals, ...(data.goals || {}) }),
         favorites: Array.isArray(data.favorites) && data.favorites.length ? data.favorites : fresh.favorites,
         settings,
       };
+      // Persist the repair once so it doesn't rerun on every load.
+      if (repaired) save(result);
+      return result;
     } catch (err) {
       return freshData();
     }
@@ -96,10 +129,12 @@ const Store = (() => {
     const entries = load().entries.filter((e) => e.date === date);
     const totals = entries.reduce(
       (acc, e) => {
-        acc.calories += e.calories;
-        acc.protein += e.protein;
-        acc.carbs += e.carbs;
-        acc.fat += e.fat;
+        // Number() guards against string values sneaking in - "+" on strings
+        // concatenates digits instead of summing.
+        acc.calories += Number(e.calories) || 0;
+        acc.protein += Number(e.protein) || 0;
+        acc.carbs += Number(e.carbs) || 0;
+        acc.fat += Number(e.fat) || 0;
         return acc;
       },
       { calories: 0, protein: 0, carbs: 0, fat: 0 }
@@ -112,10 +147,10 @@ const Store = (() => {
     const byDate = {};
     for (const e of entries) {
       if (!byDate[e.date]) byDate[e.date] = { date: e.date, calories: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
-      byDate[e.date].calories += e.calories;
-      byDate[e.date].protein += e.protein;
-      byDate[e.date].carbs += e.carbs;
-      byDate[e.date].fat += e.fat;
+      byDate[e.date].calories += Number(e.calories) || 0;
+      byDate[e.date].protein += Number(e.protein) || 0;
+      byDate[e.date].carbs += Number(e.carbs) || 0;
+      byDate[e.date].fat += Number(e.fat) || 0;
       byDate[e.date].count += 1;
     }
     return byDate;
@@ -233,7 +268,9 @@ const Store = (() => {
       throw new Error('Not a valid NutriTrack backup file.');
     }
     const data = load();
-    data.entries = parsed.entries;
+    // Backups from older app versions may carry string macro values - repair
+    // them on the way in, same as load() does for stored data.
+    data.entries = parsed.entries.map((e) => (entryNeedsRepair(e) ? normalizeEntry(e) : e));
     data.nextId = Number(parsed.nextId) || Math.max(0, ...parsed.entries.map((e) => Number(e.id) || 0)) + 1;
     if (parsed.goals) data.goals = { ...data.goals, ...parsed.goals };
     if (Array.isArray(parsed.favorites) && parsed.favorites.length) data.favorites = parsed.favorites;
